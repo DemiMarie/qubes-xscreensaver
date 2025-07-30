@@ -169,6 +169,7 @@ BuildRequires:   bc
 BuildRequires:   desktop-file-utils
 BuildRequires:   gawk
 BuildRequires:   gettext
+BuildRequires:   gettext-devel
 BuildRequires:   libtool
 BuildRequires:   pam-devel > %{pam_ver}
 BuildRequires:   sed
@@ -628,6 +629,8 @@ sed -i configure.ac \
 %__git commit -m "Don't make configure fail with unrecognized option" -a
 
 touch config.rpath
+# Add ACLOCAL_PATH for gettext 0.25 (ref: bug 2366708)
+export ACLOCAL_PATH=%{_datadir}/gettext/m4/
 aclocal
 autoconf
 autoheader
