@@ -590,6 +590,11 @@ sed -i.term \
 sed -i.rpmlint -n -e '1,5p' driver/xscreensaver.pam
 %endif
 
+# xscreensaver 6.12
+sed -i.auth driver/xscreensaver.pam.in \
+    -e '\@auth.*include.*system-auth@s|^#||'
+%__git commit -m "Use system-auth for auth again" -a
+
 if [ -x %{_datadir}/libtool/config.guess ]; then
   # use system-wide copy
    cp -p %{_datadir}/libtool/config.{sub,guess} .

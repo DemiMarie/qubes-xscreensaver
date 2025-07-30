@@ -29,21 +29,21 @@ index 6f67e138..9f8bef78 100644
 --- a/driver/windows.c
 +++ b/driver/windows.c
 @@ -970,7 +970,6 @@ watchdog_timer (XtPointer closure, XtIntervalId *id)
+ watchdog_timer (XtPointer closure, XtIntervalId *id)
  {
    saver_info *si = (saver_info *) closure;
-   saver_preferences *p = &si->prefs;
 -  Bool running_p, on_p, terminating_p;
  
    /* If the DPMS settings on the server have changed, change them back to
       what ~/.xscreensaver says they should be. */
 @@ -981,6 +980,20 @@ watchdog_timer (XtPointer closure, XtIntervalId *id)
- 
-   raise_windows (si);
+   if (! si->auth_p)		/* Do not race with the password dialog */
+     raise_windows (si);
  
 +  refresh_windows (si);
 +
 +  /* Re-schedule this timer.  The watchdog timer defaults to a bit less
-+     than the hack cycle period, but is never longer than one hour.
++     than the hack cycle period, but is never longer than one minute.
 +   */
 +  si->watchdog_id = 0;
 +  reset_watchdog_timer (si);
@@ -55,7 +55,7 @@ index 6f67e138..9f8bef78 100644
 +  Bool running_p, on_p, terminating_p;
 +
    running_p = any_screenhacks_running_p (si);
-   on_p = monitor_powered_on_p (si->dpy);
+   on_p = monitor_powered_on_p (si);
    terminating_p = si->terminating_p;
 @@ -1018,13 +1031,24 @@ watchdog_timer (XtPointer closure, XtIntervalId *id)
            for (i = 0; i < si->nscreens; i++)
@@ -81,7 +81,7 @@ index 6f67e138..9f8bef78 100644
      }
 -
 -  /* Re-schedule this timer.  The watchdog timer defaults to a bit less
--     than the hack cycle period, but is never longer than one hour.
+-     than the hack cycle period, but is never longer than one minute.
 -   */
 -  si->watchdog_id = 0;
 -  reset_watchdog_timer (si);
@@ -94,39 +94,39 @@ index 870423c2..09315f7f 100644
 +++ b/driver/xscreensaver-gfx.c
 @@ -146,6 +146,7 @@ connect_to_server (saver_info *si)
    XrmOptionDescRec options;
-   char *p;
+   char *name;
    int ac = 1;
 +  int i;
    char *av[] = { "xscreensaver" };    /* For Xt and Xrm purposes */
  
-   XSetErrorHandler (saver_ehandler);
-@@ -178,6 +179,9 @@ connect_to_server (saver_info *si)
-       fprintf (stderr, "%s: xscreensaver does not seem to be running!\n",
-                blurb());
+   /* Make sure the X11 socket doesn't get allocated to stderr: >&- 2>&-.
+@@ -193,7 +193,8 @@ connect_to_server (saver_info *si)
+       /* For tracking changes to XA_SCREENSAVER_STATUS on the root. */
+       XGetWindowAttributes (si->dpy, root, &xgwa);
+       XSelectInput (si->dpy, root,
+-                    xgwa.your_event_mask | PropertyChangeMask);
++                    xgwa.your_event_mask | PropertyChangeMask |
++                    SubstructureNotifyMask);
      }
-+
-+  for (i = 0; i < ScreenCount(si->dpy); i++)
-+    XSelectInput (si->dpy, RootWindow(si->dpy, i), SubstructureNotifyMask);
- }
- 
- 
+   else
+     {
 @@ -391,6 +395,8 @@ main_loop (saver_info *si, Bool init_p)
  
        if (event.x_event.xany.type == ClientMessage)
          handle_clientmessage (si, &event.x_event);
 +      else if (event.x_event.xany.type == MapNotify)
 +        refresh_windows (si);
- # ifdef HAVE_RANDR
-       else if (si->using_randr_extension &&
-                (event.x_event.type == 
+ 
+       else if (event.x_event.xany.type == PropertyNotify &&
+                event.x_event.xproperty.state == PropertyNewValue &&
 diff --git a/driver/xscreensaver.h b/driver/xscreensaver.h
 index 4bd84b47..b89ab87b 100644
 --- a/driver/xscreensaver.h
 +++ b/driver/xscreensaver.h
 @@ -53,6 +53,7 @@ extern void initialize_screensaver_window (saver_info *si);
- extern void blank_screen (saver_info *si);
  extern void unblank_screen (saver_info *si);
  extern void resize_screensaver_window (saver_info *si);
+ extern void reset_watchdog_timer (saver_info *);
 +extern void refresh_windows (saver_info *si);
  
  extern void get_screen_viewport (saver_screen_info *ssi,

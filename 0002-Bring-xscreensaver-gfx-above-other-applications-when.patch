@@ -79,7 +79,7 @@ index 9f8bef78..c5dbd476 100644
 +}
 +
  
- static void
+ void
  reset_watchdog_timer (saver_info *si)
 diff --git a/driver/xscreensaver-gfx.c b/driver/xscreensaver-gfx.c
 index 09315f7f..cd95301b 100644
@@ -94,16 +94,16 @@ index 09315f7f..cd95301b 100644
 +          refresh_windows (si);
 +          raise_windows_above(si, event.x_event.xmap.window);
 +        }
- # ifdef HAVE_RANDR
-       else if (si->using_randr_extension &&
-                (event.x_event.type == 
+ 
+       else if (event.x_event.xany.type == PropertyNotify &&
+                event.x_event.xproperty.state == PropertyNewValue &&
 diff --git a/driver/xscreensaver.h b/driver/xscreensaver.h
 index b89ab87b..d2df1135 100644
 --- a/driver/xscreensaver.h
 +++ b/driver/xscreensaver.h
 @@ -54,6 +54,7 @@ extern void blank_screen (saver_info *si);
- extern void unblank_screen (saver_info *si);
  extern void resize_screensaver_window (saver_info *si);
+ extern void reset_watchdog_timer (saver_info *);
  extern void refresh_windows (saver_info *si);
 +extern void raise_windows_above(saver_info *si, Window w);
  
